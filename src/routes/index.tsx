@@ -9,7 +9,7 @@ export const Route = createFileRoute('/')({
 function App() {
   return (
     <div className="text-center">
-      <h1 className="text-[3rem] font-bold text-red-800">
+      <h1 className="text-[3rem] font-[600] text-[#B767C8]">
         Welcome to the Rick and Morty App
       </h1>
       <div className="mt-6">

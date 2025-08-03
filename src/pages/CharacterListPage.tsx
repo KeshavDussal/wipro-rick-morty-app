@@ -12,35 +12,53 @@ import type {
   CharacterBase,
   CharactersResponse,
 } from './CharacterListPageTypes'
-
+/**
+ * Component: CharacterListPage
+ *
+ * Purpose:
+ * Renders list of characters from Rick and Morty character api.
+ * Supports pagination, table display, and refresh functionality.
+ */
 export default function CharacterListPage() {
+  // Read query param `page` from URL, defaulting to 1
   const { page = 1 } = useSearch({ strict: false }) as { page?: number }
+
   const navigate = useNavigate()
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Constants
+  const PAGE_SIZE = 15
+  const REFRESH_DELAY = 400
+  const QUERY_KEY = 'characters'
   const LAST_PAGE = 42
+
+  // Fetch character data using React Query
   const { data, isLoading, isError, refetch } = useQuery<CharactersResponse>({
-    queryKey: ['characters', page],
-    queryFn: () => fetchCharacters(page),
-    placeholderData: (previousData) => previousData,
+    queryKey: [QUERY_KEY, page, PAGE_SIZE],
+    queryFn: () => fetchCharacters(page, PAGE_SIZE),
+    placeholderData: (previousData) => previousData, // Preserve data between queries to prevent flicker
+    staleTime: 1000 * 60 * 2,
   })
 
   const characters = data?.results || []
 
+  // Manually change page and trigger data refetch
   const changePage = (newPage: number) => {
     window.history.pushState(null, '', `/?page=${newPage}`)
     refetch()
   }
 
+  // Handle refresh logic with minimum delay
   const handleRefresh = async () => {
     setIsRefreshing(true)
     await Promise.all([
-      refetch(),
-      new Promise((resolve) => setTimeout(resolve, 500)), // Minimum delay
+      refetch(), // Trigger query refetch
+      new Promise((resolve) => setTimeout(resolve, REFRESH_DELAY)), // Add delay for consistent UX
     ])
     setIsRefreshing(false)
   }
 
-  // Define TanStack Table columns
+  // Define table columns using TanStack Table's column helper
   const columnHelper = createColumnHelper<CharacterBase>()
   const columns = useMemo(
     () => [
@@ -58,6 +76,7 @@ export default function CharacterListPage() {
           const status = info.getValue()
           let bgColor = ''
 
+          // Determine background color based on status
           switch (status) {
             case 'Alive':
               bgColor = 'bg-green-600'
@@ -88,7 +107,8 @@ export default function CharacterListPage() {
     ],
     [],
   )
-  // @ts-ignore
+
+  // @ts-ignore Create instance of the table
   const table = useReactTable({
     data: characters,
     columns,
@@ -97,25 +117,44 @@ export default function CharacterListPage() {
 
   return (
     <div>
-      <h1 className="text-[1.5rem] font-bolder italic mb-4 underline mb-[1rem]">
-        Character List
-      </h1>
-      <button
-        className="px-[0.4rem] py-[0.2rem] border rounded bg-blue-500 text-white mb-[1rem]"
-        onClick={handleRefresh}
-      >
-        Refresh 🔄
-      </button>
+      {/* Refresh button */}
+      <div className="relative mb-[1rem]">
+        <button
+          className="absolute right-[1.5rem] top-1/2 -translate-y-1/2 mr-4 mt-6 flex items-center gap-1 px-3 py-1.5 rounded-[0.5rem] border border-blue-700 bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400"
+          onClick={handleRefresh}
+        >
+          🔄 <span>Refresh</span>
+        </button>
+      </div>
 
-      {(isLoading || isRefreshing) && <p>Refreshing...</p>}
+      {/* Loading or refreshing state */}
+      {(isLoading || isRefreshing) && (
+        <div className="flex items-center justify-center min-h-[50vh] text-[3rem]">
+          <p className="text-lg font-semibold">Refreshing...</p>
+        </div>
+      )}
 
-      {!isLoading && !isRefreshing && isError && <p>Error loading data</p>}
+      {/* Error state */}
+      {!isLoading && !isRefreshing && isError && (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p className="text-red-500 font-medium">Error loading data</p>
+        </div>
+      )}
 
+      {/* Data table */}
       {!isLoading && !isRefreshing && !isError && (
         <>
+          {/* Table display */}
           <div className="overflow-x-auto mt-4 mx-[1rem]">
-            <table className="w-full border">
-              <thead className="bg-[#9F0712] text-white">
+            <table
+              className="w-full border-[#D3D3D3] table-auto rounded-lg overflow-hidden shadow-sm"
+              aria-label="Character list"
+              role="table"
+            >
+              <caption className="caption-top text-3xl font-semibold italic underline decoration-blue-500 underline-offset-4 text-center tracking-wide text-gray-800 drop-shadow-sm mb-[1rem]">
+                Character List
+              </caption>
+              <thead className="bg-[#B767C8] text-white">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
@@ -135,8 +174,14 @@ export default function CharacterListPage() {
                 {table.getRowModel().rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="cursor-pointer hover:bg-gray-100"
+                    tabIndex={0}
+                    role="button"
                     onClick={() =>
+                      navigate({ to: `/character/${row.original.id}` })
+                    }
+                    className="cursor-pointer hover:bg-gray-100 transition-colors"
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' &&
                       navigate({ to: `/character/${row.original.id}` })
                     }
                   >
@@ -154,34 +199,57 @@ export default function CharacterListPage() {
             </table>
           </div>
 
+          {/* Pagination controls */}
           <div className="flex gap-4 items-center justify-center mt-[1rem] mb-[1rem]">
-            {/* Previous Button */}
+            {/* First page */}
             <button
               disabled={page === 1}
-              className={`px-[0.4rem] py-[0.2rem] border rounded flex items-center gap-1 ${
+              className={`px-[0.4rem] py-[0.1rem] border rounded flex items-center gap-1 ${
+                page === 1 ? 'opacity-50 bg-[#D3D3D3] cursor-not-allowed' : ''
+              }`}
+              onClick={() => changePage(1)}
+            >
+              First
+            </button>
+
+            {/* Previous page */}
+            <button
+              disabled={page === 1}
+              className={`px-[0.4rem] py-[0.1rem] border rounded flex items-center gap-1 ${
                 page === 1 ? 'opacity-50 bg-[#D3D3D3] cursor-not-allowed' : ''
               }`}
               onClick={() => changePage(page - 1)}
             >
-              {page === 1 && <span title="First page"></span>}
-              Prev
+              ‹
             </button>
 
-            {/* Current Page Display */}
+            {/* Current page number */}
             <span className="text-sm">Page {page}</span>
 
-            {/* Next Button */}
+            {/* Next page */}
             <button
               disabled={page === LAST_PAGE}
-              className={`px-[0.4rem] py-[0.2rem] border rounded flex items-center gap-1 ${
+              className={`px-[0.4rem] py-[0.1rem] border rounded flex items-center gap-1 ${
                 page === LAST_PAGE
                   ? 'opacity-50 bg-[#D3D3D3] cursor-not-allowed'
                   : ''
               }`}
               onClick={() => changePage(page + 1)}
             >
-              Next
-              {page === LAST_PAGE && <span title="Last page"></span>}
+              ›
+            </button>
+
+            {/* Last page */}
+            <button
+              disabled={page === LAST_PAGE}
+              className={`px-[0.4rem] py-[0.1rem] border rounded flex items-center gap-1 ${
+                page === LAST_PAGE
+                  ? 'opacity-50 bg-[#D3D3D3] cursor-not-allowed'
+                  : ''
+              }`}
+              onClick={() => changePage(LAST_PAGE)}
+            >
+              Last
             </button>
           </div>
         </>
