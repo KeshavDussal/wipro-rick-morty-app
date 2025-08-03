@@ -100,3 +100,7 @@ MIT
 ## Demo
 
 ![Form GIF Output](./public/wipro-rick-and-morty-output.gif)
+
+## Demo Link:
+
+https://wipro-rick-and-morty.netlify.app/
