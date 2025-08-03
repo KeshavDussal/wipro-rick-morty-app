@@ -1,18 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchCharacterById } from '@/api/rickAndMorty'
 import { useParams } from '@tanstack/react-router'
-
-type Character = {
-  id: number
-  name: string
-  status: string
-  species: string
-  gender: string
-  origin: { name: string }
-  location: { name: string }
-  image: string
-  created: string
-}
+import type { Character } from './CharacterListPageTypes'
 
 export default function CharacterDetailPage() {
   const { id } = useParams({ from: '/character/$id' }) as { id: string }
@@ -37,10 +26,14 @@ export default function CharacterDetailPage() {
     )
 
   return (
-    <div className="flex justify-center items-center bg-gradient-to-br from-gray-100 to-white p-6">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-fullborder border-gray-200 h-[35rem] mt-[2rem]">
-        <div className="relative">
-          <img src={data.image} alt={data.name} className="w-full" />
+    <div className="flex justify-center items-center to-white p-6 h-[35rem] mt-[2rem] w-full md:w-[20rem] !important">
+      <div className="bg-white rounded-2xl shadow-2xl  border border-gray-200 h-[40rem] mt-[2rem] flex flex-col">
+        <div className="relative h-[23rem] w-full overflow-hidden rounded-t-2xl object-fill ">
+          <img
+            src={data.image}
+            alt={data.name}
+            className="w-full h-full object-fill object-[center_20%]"
+          />
         </div>
 
         <div className="p-[1rem]">
